@@ -207,9 +207,12 @@ def parse_html(html: str, base_url: str) -> list[dict]:
 
 
 def is_blocked(html: str) -> bool:
-    """Detect common bot-block pages."""
-    lower = html[:2000].lower()
-    return any(k in lower for k in ("access denied", "blocked", "robot", "captcha", "unusual traffic"))
+    """Detect actual bot-block pages (not false positives from inline scripts)."""
+    # Block pages are short and lack __NEXT_DATA__
+    if "__NEXT_DATA__" in html:
+        return False
+    lower = html[:3000].lower()
+    return any(k in lower for k in ("access denied", "unusual traffic", "verify you are human", "captcha"))
 
 
 def scrape(urls: list[tuple], base_url: str, retailer: str) -> tuple[list[dict], str | None]:
