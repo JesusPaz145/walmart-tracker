@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tech Deals — Walmart & Sam's Club</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: #0071ce;
+      color: white;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .site-title  { font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .site-title small { display: block; font-size: 11px; font-weight: 400; opacity: .8; margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    /* retailer toggle */
+    .retailer-toggle { display: flex; background: rgba(255,255,255,.15); border-radius: 20px; padding: 3px; gap: 3px; }
+    .retailer-btn {
+      padding: 5px 14px; border-radius: 16px; border: none; font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: all .15s;
+      background: transparent; color: rgba(255,255,255,.85);
+    }
+    .retailer-btn.active { background: white; color: #0071ce; }
+    .retailer-btn.sams.active { color: #004990; }
+
+    /* store selector */
+    #store-select {
+      padding: 5px 10px; border-radius: 16px; border: none;
+      font-size: 12.5px; font-weight: 600;
+      background: rgba(255,255,255,.18); color: white; cursor: pointer; outline: none;
+    }
+    #store-select option { background: #005ea6; color: white; }
+
+    #last-updated { font-size: 11px; opacity: .75; white-space: nowrap; }
+
+    #refresh-btn {
+      background: white; color: #0071ce; border: none;
+      padding: 6px 13px; border-radius: 16px; font-weight: 700; font-size: 12px;
+      cursor: pointer; transition: background .15s; white-space: nowrap;
+    }
+    #refresh-btn:hover { background: #e6f0fa; }
+    #refresh-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── LAYOUT ── */
+    .page-body {
+      display: flex; max-width: 1440px; margin: 0 auto;
+      padding: 18px 16px; gap: 20px; align-items: flex-start;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar { width: 195px; flex-shrink: 0; position: sticky; top: 62px; }
+    .sidebar h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #999; margin-bottom: 8px; }
+    .cat-list { display: flex; flex-direction: column; gap: 3px; }
+
+    .cat-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 10px; border-radius: 8px; border: none;
+      background: white; cursor: pointer; font-size: 12.5px; color: #333;
+      text-align: left; transition: background .12s, color .12s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .cat-btn:hover { background: #e6f0fa; color: #0071ce; }
+    .cat-btn.active { background: #0071ce; color: white; font-weight: 600; }
+    .cat-btn.active .cat-count { background: rgba(255,255,255,.22); color: white; }
+    .cat-icon { font-size: 14px; flex-shrink: 0; }
+    .cat-label { flex: 1; line-height: 1.3; }
+    .cat-count { background: #f0f2f5; color: #777; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; flex-shrink: 0; }
+
+    /* Sam's Club sidebar accent */
+    body.sams .cat-btn.active { background: #004990; }
+
+    /* ── CONTENT ── */
+    .content { flex: 1; min-width: 0; }
+
+    .store-notice {
+      background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px;
+      padding: 9px 13px; font-size: 12px; color: #1565c0;
+      margin-bottom: 14px; display: none; align-items: center; gap: 8px;
+    }
+    body.sams .store-notice { background: #e8eaf6; border-color: #9fa8da; color: #283593; }
+
+    .stats-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .stat-chip { background: white; border-radius: 8px; padding: 7px 13px; font-size: 12px; color: #666; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+    .stat-chip strong { display: block; font-size: 17px; color: #0071ce; line-height: 1.1; }
+    body.sams .stat-chip strong { color: #004990; }
+
+    .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+
+    #search-input {
+      flex: 1; min-width: 160px; padding: 8px 13px;
+      border: 1.5px solid #dde0e5; border-radius: 8px;
+      font-size: 13.5px; background: white; outline: none;
+    }
+    #search-input:focus { border-color: #0071ce; }
+
+    #sort-select {
+      padding: 8px 11px; border: 1.5px solid #dde0e5;
+      border-radius: 8px; font-size: 13px; background: white; cursor: pointer; outline: none;
+    }
+
+    .results-count { font-size: 12px; color: #999; white-space: nowrap; }
+
+    /* States */
+    #loading { text-align: center; padding: 70px 20px; display: none; }
+    .spinner {
+      width: 44px; height: 44px; border: 4px solid #e0e0e0; border-top-color: #0071ce;
+      border-radius: 50%; animation: spin .75s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { color: #777; font-size: 14px; }
+
+    #error-box {
+      background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px;
+      padding: 14px; margin-bottom: 14px; display: none;
+    }
+    #error-box h3 { color: #856404; margin-bottom: 5px; font-size: 13.5px; }
+    #error-box p  { color: #856404; font-size: 12px; }
+
+    #no-results { text-align: center; padding: 50px 20px; color: #aaa; display: none; }
+
+    /* ── GRID ── */
+    #products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .product-card {
+      background: white; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 1px 5px rgba(0,0,0,.07);
+      transition: transform .16s, box-shadow .16s;
+      display: flex; flex-direction: column; position: relative;
+    }
+    .product-card:hover { transform: translateY(-3px); box-shadow: 0 7px 20px rgba(0,0,0,.12); }
+
+    /* retailer stripe on card top */
+    .product-card::before {
+      content: ''; display: block; height: 3px;
+      background: #0071ce;
+    }
+    .product-card.sams::before { background: #004990; }
+
+    .savings-badge {
+      position: absolute; top: 11px; left: 8px;
+      background: #e63535; color: white; font-size: 11px; font-weight: 800;
+      padding: 2px 7px; border-radius: 5px; z-index: 2;
+    }
+
+    .product-img-wrap {
+      background: #f8f9fa; padding: 12px;
+      display: flex; align-items: center; justify-content: center; height: 155px;
+    }
+    .product-img-wrap img { max-width: 100%; max-height: 130px; object-fit: contain; }
+    .no-image { font-size: 38px; color: #ddd; }
+
+    .product-info { padding: 11px 12px 8px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+
+    .product-category { font-size: 10px; color: #0071ce; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+    .sams .product-category { color: #004990; }
+
+    .product-name {
+      font-size: 12.5px; font-weight: 500; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .price-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; margin-top: 2px; }
+    .current-price { font-size: 20px; font-weight: 800; color: #e63535; }
+    .was-price { font-size: 12px; color: #bbb; text-decoration: line-through; }
+
+    .savings-line {
+      font-size: 11.5px; color: #2e7d32; font-weight: 700;
+      background: #e8f5e9; border-radius: 4px; padding: 2px 7px; display: inline-block;
+    }
+
+    /* ── CARD BUTTONS ── */
+    .card-actions { display: flex; }
+
+    .btn-retailer {
+      flex: 1; padding: 9px 6px; color: white; text-decoration: none;
+      text-align: center; font-size: 12px; font-weight: 700;
+      transition: filter .15s; border: none; cursor: pointer;
+    }
+    .btn-retailer:hover { filter: brightness(1.12); }
+
+    .btn-walmart { background: #0071ce; }
+    .btn-sams    { background: #004990; }
+    .btn-amazon  { background: #FF9900; color: #111; }
+
+    .btn-divider { width: 1px; background: rgba(255,255,255,.3); flex-shrink: 0; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 680px) {
+      .page-body { flex-direction: column; padding: 12px 10px; }
+      .sidebar { width: 100%; position: static; }
+      .cat-list { flex-direction: row; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="site-title">
+      Tech Deals
+      <small id="header-subtitle">Walmart.com</small>
+    </div>
+  </div>
+  <div class="header-right">
+    <!-- Retailer toggle -->
+    <div class="retailer-toggle">
+      <button class="retailer-btn active" id="btn-walmart" onclick="switchRetailer('walmart')">🛒 Walmart</button>
+      <button class="retailer-btn sams"   id="btn-sams"    onclick="switchRetailer('sams')">⭐ Sam's Club</button>
+    </div>
+    <span id="last-updated"></span>
+    <button id="refresh-btn" onclick="loadDeals(true)">&#8635; Refresh</button>
+  </div>
+</header>
+
+<div class="page-body">
+  <nav class="sidebar" id="sidebar" style="display:none">
+    <h2>Categorías</h2>
+    <div class="cat-list" id="cat-list"></div>
+  </nav>
+
+  <div class="content">
+
+    <div id="error-box">
+      <h3>No se pudieron cargar los deals</h3>
+      <p id="error-msg"></p>
+    </div>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      <p id="loading-msg">Cargando deals...</p>
+    </div>
+
+    <div class="stats-row" id="stats-row" style="display:none">
+      <div class="stat-chip"><strong id="stat-total">0</strong>Deals reales</div>
+      <div class="stat-chip"><strong id="stat-best" style="font-size:14px">—</strong>Mayor ahorro</div>
+      <div class="stat-chip"><strong id="stat-cats">0</strong>Categorías</div>
+    </div>
+
+    <div class="toolbar" id="toolbar" style="display:none">
+      <input id="search-input" type="text" placeholder="🔍 Buscar producto..." oninput="renderFiltered()" />
+      <select id="sort-select" onchange="renderFiltered()">
+        <option value="savings-desc">Mayor ahorro $</option>
+        <option value="pct-desc">Mayor % descuento</option>
+        <option value="price-asc">Precio: menor a mayor</option>
+        <option value="price-desc">Precio: mayor a menor</option>
+        <option value="default">Orden original</option>
+        <option value="name">Nombre A-Z</option>
+      </select>
+      <span class="results-count" id="results-count"></span>
+    </div>
+
+    <div id="no-results" style="display:none">
+      <p style="font-size:36px">🔍</p>
+      <p style="margin-top:10px; font-size:14px">No hay productos con ese filtro.</p>
+    </div>
+
+    <div id="products-grid"></div>
+  </div>
+</div>
+
+<script>
+const CAT_ICONS = {
+  "Laptops & Computers": "💻",
+  "Phones": "📱",
+  "TVs": "📺",
+  "Consoles & Gaming": "🎮",
+  "Audio": "🎧",
+  "Tablets": "📟",
+  "Smart Home & Cameras": "🏠",
+  "Other Tech": "🔌",
+};
+
+let allProducts = [];
+let activeCategory = "all";
+let currentRetailer = "walmart";
+
+// ── Retailer switch ──────────────────────────────────────────────────────────
+function switchRetailer(r) {
+  if (r === currentRetailer) return;
+  currentRetailer = r;
+  activeCategory = "all";
+
+  // Header color
+  document.querySelector("header").style.background = r === "sams" ? "#004990" : "#0071ce";
+  document.body.classList.toggle("sams", r === "sams");
+
+  document.getElementById("btn-walmart").classList.toggle("active", r === "walmart");
+  document.getElementById("btn-sams").classList.toggle("active", r === "sams");
+  loadDeals(false);
+}
+
+// ── Load deals ───────────────────────────────────────────────────────────────
+async function loadDeals(forceRefresh = false) {
+  const btn = document.getElementById("refresh-btn");
+  btn.disabled = true;
+
+  document.getElementById("loading-msg").textContent =
+    "Cargando deals de " + (currentRetailer === "sams" ? "Sam's Club" : "Walmart") + "...";
+  document.getElementById("loading").style.display = "block";
+  document.getElementById("error-box").style.display = "none";
+  document.getElementById("toolbar").style.display = "none";
+  document.getElementById("sidebar").style.display = "none";
+  document.getElementById("stats-row").style.display = "none";
+  document.getElementById("products-grid").innerHTML = "";
+  document.getElementById("no-results").style.display = "none";
+
+  try {
+    const base = forceRefresh ? "/api/refresh" : "/api/deals";
+    const url = `${base}?retailer=${currentRetailer}`;
+    const resp = await fetch(url, { method: forceRefresh ? "POST" : "GET" });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    allProducts = data.products || [];
+
+    if (!allProducts.length && data.errors?.length) {
+      document.getElementById("error-box").style.display = "block";
+      document.getElementById("error-msg").textContent = data.errors.join(" | ");
+    }
+
+    if (allProducts.length) {
+      const maxSavings = Math.max(...allProducts.map(p => p.savings || 0));
+      document.getElementById("stat-total").textContent = data.total;
+      document.getElementById("stat-best").textContent = maxSavings > 0 ? "-$" + maxSavings.toFixed(0) : "—";
+      document.getElementById("stat-cats").textContent = Object.keys(data.categories || {}).length;
+      document.getElementById("stats-row").style.display = "flex";
+
+      document.getElementById("header-subtitle").textContent =
+        (currentRetailer === "sams" ? "SamsClub.com" : "Walmart.com") + " · " + data.total + " deals";
+
+      buildSidebar(data.categories || {});
+      document.getElementById("sidebar").style.display = "block";
+      document.getElementById("toolbar").style.display = "flex";
+      document.getElementById("last-updated").textContent = new Date().toLocaleTimeString();
+    }
+
+    renderFiltered();
+  } catch (err) {
+    document.getElementById("error-box").style.display = "block";
+    document.getElementById("error-msg").textContent = err.message;
+  } finally {
+    document.getElementById("loading").style.display = "none";
+    btn.disabled = false;
+  }
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function buildSidebar(cats) {
+  const list = document.getElementById("cat-list");
+  list.innerHTML = "";
+  list.appendChild(makeCatBtn("all", "🛒", "Todos", allProducts.length));
+  Object.entries(cats).sort((a, b) => b[1] - a[1]).forEach(([cat, count]) => {
+    list.appendChild(makeCatBtn(cat, CAT_ICONS[cat] || "📦", cat, count));
+  });
+}
+
+function makeCatBtn(id, icon, label, count) {
+  const btn = document.createElement("button");
+  btn.className = "cat-btn" + (id === activeCategory ? " active" : "");
+  btn.dataset.cat = id;
+  btn.innerHTML =
+    `<span class="cat-icon">${icon}</span>` +
+    `<span class="cat-label">${escHtml(label)}</span>` +
+    `<span class="cat-count">${count}</span>`;
+  btn.onclick = () => {
+    activeCategory = id;
+    document.querySelectorAll(".cat-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.cat === id));
+    renderFiltered();
+  };
+  return btn;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderFiltered() {
+  const query = document.getElementById("search-input").value.toLowerCase().trim();
+  const sort  = document.getElementById("sort-select").value;
+
+  let filtered = allProducts.filter(p =>
+    (activeCategory === "all" || p.category === activeCategory) &&
+    (!query || p.name.toLowerCase().includes(query))
+  );
+
+  if (sort === "savings-desc") filtered.sort((a, b) => (b.savings ?? 0) - (a.savings ?? 0));
+  else if (sort === "pct-desc")    filtered.sort((a, b) => (b.savings_pct ?? 0) - (a.savings_pct ?? 0));
+  else if (sort === "price-asc")   filtered.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  else if (sort === "price-desc")  filtered.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
+  else if (sort === "name")        filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+  document.getElementById("results-count").textContent =
+    filtered.length + " producto" + (filtered.length !== 1 ? "s" : "");
+
+  const grid = document.getElementById("products-grid");
+  grid.innerHTML = "";
+
+  if (!filtered.length) {
+    document.getElementById("no-results").style.display = "block";
+    return;
+  }
+  document.getElementById("no-results").style.display = "none";
+
+  const isSams = currentRetailer === "sams";
+
+  filtered.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "product-card" + (isSams ? " sams" : "");
+
+    const imgHtml = p.image
+      ? `<img src="${escHtml(p.image)}" alt="${escHtml(p.name)}" loading="lazy" />`
+      : `<div class="no-image">📦</div>`;
+
+    const priceHtml =
+      `<div class="price-row">` +
+        `<span class="current-price">$${p.price.toFixed(2)}</span>` +
+        (p.was_price ? `<span class="was-price">$${p.was_price.toFixed(2)}</span>` : "") +
+      `</div>`;
+
+    const savingsHtml = p.savings
+      ? `<div class="savings-line">Ahorras $${p.savings.toFixed(2)} (${p.savings_pct}% off)</div>`
+      : "";
+
+    const badgeHtml = p.savings_pct
+      ? `<div class="savings-badge">-${p.savings_pct}%</div>` : "";
+
+    // Retailer button
+    const retailerBtn = isSams
+      ? `<a class="btn-retailer btn-sams" href="${escHtml(p.url)}" target="_blank" rel="noopener">Ver en Sam's Club</a>`
+      : `<a class="btn-retailer btn-walmart" href="${escHtml(p.url)}" target="_blank" rel="noopener">Ver en Walmart</a>`;
+
+    // Amazon search button
+    const amazonUrl = "https://www.amazon.com/s?k=" + encodeURIComponent(p.name.slice(0, 80));
+    const amazonBtn = `<a class="btn-retailer btn-amazon" href="${amazonUrl}" target="_blank" rel="noopener">Buscar en Amazon</a>`;
+
+    card.innerHTML =
+      badgeHtml +
+      `<div class="product-img-wrap">${imgHtml}</div>` +
+      `<div class="product-info${isSams ? " sams" : ""}">` +
+        `<div class="product-category">${escHtml(CAT_ICONS[p.category] || "📦")} ${escHtml(p.category)}</div>` +
+        `<div class="product-name">${escHtml(p.name)}</div>` +
+        priceHtml + savingsHtml +
+      `</div>` +
+      `<div class="card-actions">` +
+        retailerBtn +
+        `<div class="btn-divider"></div>` +
+        amazonBtn +
+      `</div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+function escHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+loadDeals();
+</script>
+</body>
+</html>
