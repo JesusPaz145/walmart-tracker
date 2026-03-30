@@ -23,9 +23,11 @@ def get_cached(key: str, fetcher):
         now = time.time()
         if key in _cache and (now - _cache_time.get(key, 0)) < CACHE_TTL:
             return _cache[key]
-        _cache[key] = fetcher()
-        _cache_time[key] = time.time()
-        return _cache[key]
+        result = fetcher()
+        if result.get("total", 0) > 0:
+            _cache[key] = result
+            _cache_time[key] = time.time()
+        return result
 
 
 def bust(key: str, fetcher):

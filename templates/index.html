@@ -338,9 +338,9 @@ async function loadDeals(forceRefresh = false) {
     const data = await resp.json();
     allProducts = data.products || [];
 
-    if (!allProducts.length && data.errors?.length) {
+    if (!allProducts.length && data.error) {
       document.getElementById("error-box").style.display = "block";
-      document.getElementById("error-msg").textContent = data.errors.join(" | ");
+      document.getElementById("error-msg").textContent = data.error;
     }
 
     if (allProducts.length) {

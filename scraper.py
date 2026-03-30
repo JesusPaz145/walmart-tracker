@@ -206,15 +206,27 @@ def parse_html(html: str, base_url: str) -> list[dict]:
     return []
 
 
-def scrape(urls: list[tuple], base_url: str, retailer: str) -> list[dict]:
+def is_blocked(html: str) -> bool:
+    """Detect common bot-block pages."""
+    lower = html[:2000].lower()
+    return any(k in lower for k in ("access denied", "blocked", "robot", "captcha", "unusual traffic"))
+
+
+def scrape(urls: list[tuple], base_url: str, retailer: str) -> tuple[list[dict], str | None]:
     session = make_session()
     all_products: list[dict] = []
     seen: set[str] = set()
+    error = None
 
     for label, url in urls:
         print(f"  [{retailer}] {label}")
         html = fetch_page(session, url)
         if not html:
+            error = f"{retailer} no respondió"
+            continue
+        if is_blocked(html):
+            error = f"{retailer} bloqueó la solicitud (IP de servidor detectada)"
+            print(f"  [{retailer}] BLOCKED")
             continue
         for p in parse_html(html, base_url):
             if p["url"] not in seen:
@@ -224,10 +236,10 @@ def scrape(urls: list[tuple], base_url: str, retailer: str) -> list[dict]:
                 all_products.append(p)
 
     print(f"  [{retailer}] Total: {len(all_products)} deals")
-    return all_products
+    return all_products, error if not all_products else None
 
 
-def _build_result(products: list[dict]) -> dict:
+def _build_result(products: list[dict], error: str | None) -> dict:
     category_counts: dict[str, int] = {}
     for p in products:
         cat = p.get("category", OTHER_CATEGORY)
@@ -236,12 +248,15 @@ def _build_result(products: list[dict]) -> dict:
         "products": products,
         "total": len(products),
         "categories": category_counts,
+        "error": error,
     }
 
 
 def get_walmart_deals() -> dict:
-    return _build_result(scrape(WALMART_URLS, "https://www.walmart.com", "Walmart"))
+    products, error = scrape(WALMART_URLS, "https://www.walmart.com", "Walmart")
+    return _build_result(products, error)
 
 
 def get_sams_deals() -> dict:
-    return _build_result(scrape(SAMS_URLS, "https://www.samsclub.com", "Sam's Club"))
+    products, error = scrape(SAMS_URLS, "https://www.samsclub.com", "Sam's Club")
+    return _build_result(products, error)
